@@ -1,26 +1,39 @@
-#Elijo la imagen de docker que voy a usar, en este caso una php:7.4-cli, pongo el TAG 7.4-cli que ews la version que quiero
-FROM php:7.4-cli
-#Copio la aplicacion php desde la ruta hasta /var/www/html
 
-ADD simple-php-website /var/www/html
+ #Lo que hago es usar de base un contenedor ubuntu, enconcreto con el tag latest el último en versión que este disponible
+FROM ubuntu:latest
+
+#Ahora instalo Apache, php y mysql
+
+# install Apache and PHP
+#Actualiza la lista de paquetes disponibles en el sistema operativo base.
+RUN apt-get update && \
+#Instala el paquete tzdata
+apt-get install -y tzdata && \
+#Establece la zona horaria en Madrid, España, creando un enlace simbólico desde la zona horaria deseada en /usr/share/zoneinfo a /etc/localtime.
+ln -fs /usr/share/zoneinfo/Europe/Madrid /etc/localtime && \
+#Actualiza la configuración de tiempo de zona para que use la zona horaria seleccionada.
+dpkg-reconfigure -f noninteractive tzdata && \
+#Instala el paquete Apache en el sistema operativo base.
+    apt-get install -y apache2 && \
+    #Instala el módulo de PHP para Apache en el sistema operativo base.
+    apt-get install -y libapache2-mod-php && \
+    #Instala el paquete de PHP para MySQL en el sistema operativo base.
+    apt-get install -y php-mysql
+    
+#Instala git
+RUN apt-get install -y git
+#Elimino el directorio porque si no no me deja clonarlo porque el directorio no esta vacio
+#Descarga una aplicación PHP desde un repositorio de GitHub y la copia en el directorio web de Apache.
+RUN rm -rf /var/www/html && git clone  https://github.com/banago/simple-php-website.git /var/www/html/
 
 
-#Expongo el puerto 8080
+#Configuro apache para usar una aplicación php
+#Agrega una línea al archivo de configuración de Apache para establecer el nombre del servidor como "localhost".
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-EXPOSE 8080
+#Expone el puerto 80 para permitir el acceso a la aplicación PHP desde el host del contenedor.
+EXPOSE 80
 
-#Ejecuto el comando CMD que lo que hará es,
-# ejecutar el comando php cpn las opciones -S,
-# que sirve para indicarle que se inicie un servidor web interno,
-# 0.0.0.0:8080, que es la dirección ip y el puerto porque escuchará el servidor web interno,
-#0.0.0.0 significa que escuchará en todas las direcciones ip que hay en el la máquina,
-#la opción -t es para indicar la raíz del servidor web, en este caso "/var/www/html"
-
-#En resumen,
-# esta línea ejecuta el comando para iniciar un servidor web interno de PHP en el puerto 8000 y utilizando el directorio "/var/www/html" como raíz del servidor, 
-#de esta manera se podra acceder a la aplicacion en PHP desde el navegador web en la dirección http://localhost:8000.
-
-CMD ["php","-S","0.0.0.0:8080","-t","/var/www/html"]
-
- 
+#Inicia el servidor Apache con el flag "-D FOREGROUND" para que el contenedor siga ejecutándose
+CMD ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
 
